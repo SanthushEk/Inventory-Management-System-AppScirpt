@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Purchase Products</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root { --primary: #1abc9c; --dark: #2c3e50; --gray: #7f8c8d; --light-gray: #ecf0f1; --white: #ffffff; }
+    body { font-family: 'Roboto', sans-serif; background: #f4f6f8; padding: 20px; }
+    .container { max-width: 1100px; margin: auto; background: var(--white); border-radius: 8px; padding: 25px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+    h1 { font-family: 'Montserrat', sans-serif; color: var(--dark); margin-bottom: 20px; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    label { font-weight: 500; margin-bottom: 5px; display: block; color: var(--dark); }
+    input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+    .btn { background: var(--primary); color: white; border: none; padding: 12px 18px; border-radius: 4px; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; margin-top: 25px; }
+    th { background: var(--dark); color: white; padding: 12px; }
+    td { padding: 12px; border-bottom: 1px solid var(--light-gray); }
+    .no-data { text-align: center; color: var(--gray); }
+    .action-btn { margin-right: 6px; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; color: #fff; }
+    .edit-btn { background: #f39c12; }
+    .delete-btn { background: #e74c3c; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Purchase Products</h1>
+
+  <div class="form-grid">
+    <div><label>Supplier ID</label><input type="text" id="supplierId"></div>
+    <div><label>Supplier Name</label><input type="text" id="supplierName"></div>
+    <div><label>Model</label><input type="text" id="model"></div>
+    <div><label>Quantity</label><input type="number" id="quantity" min="1"></div>
+    <div><label>Order Date</label><input type="date" id="orderDate"></div>
+  </div>
+
+  <button class="btn" onclick="save()">Save</button>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Order ID</th>
+        <th>Date</th>
+        <th>Supplier ID</th>
+        <th>Supplier Name</th>
+        <th>Model</th>
+        <th>Quantity</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="ordersBody">
+      <tr class="no-data"><td colspan="7">No orders yet</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+let editOrderId = null;
+const ordersBody = document.getElementById("ordersBody");
+
+// Load all orders on page load
+window.onload = () => {
+  google.script.run.withSuccessHandler(loadTable).getOrders();
+};
+
+// Populate table
+function loadTable(data) {
+  ordersBody.innerHTML = "";
+  if (!data || data.length === 0) {
+    ordersBody.innerHTML = `<tr class="no-data"><td colspan="7">No orders yet</td></tr>`;
+    return;
+  }
+  data.forEach(o => addRow(o));
+}
+
+// Build row HTML
+function rowHtml(o) {
+  return `
+    <td>${o.orderId}</td>
+    <td>${o.date}</td>
+    <td>${o.supplierId}</td>
+    <td>${o.supplierName}</td>
+    <td>${o.model}</td>
+    <td>${o.quantity}</td>
+    <td>
+      <button class="action-btn edit-btn" onclick="edit(this)">Edit</button>
+      <button class="action-btn delete-btn" onclick="removeRow(this)">Delete</button>
+    </td>
+  `;
+}
+
+// Get form data
+function getForm() {
+  return {
+    date: document.getElementById("orderDate").value,
+    supplierId: document.getElementById("supplierId").value.trim(),
+    supplierName: document.getElementById("supplierName").value.trim(),
+    model: document.getElementById("model").value.trim(),
+    quantity: document.getElementById("quantity").value,
+    orderId: editOrderId
+  };
+}
+
+// Validate form
+function validate(o) {
+  if (!o.date || !o.supplierId || !o.supplierName || !o.model || !o.quantity) {
+    alert("Please fill all fields");
+    return false;
+  }
+  return true;
+}
+
+// Clear form
+function clearForm() {
+  document.querySelectorAll("input").forEach(i => i.value = "");
+  editOrderId = null;
+}
+
+// Save or update order
+function save() {
+  const order = getForm();
+  if (!validate(order)) return;
+
+  if (!editOrderId) {
+    google.script.run.withSuccessHandler(newOrder => {
+      addRow(newOrder);
+      clearForm();
+    }).saveOrder(order);
+  } else {
+    google.script.run.withSuccessHandler(updatedOrder => {
+      const tr = ordersBody.querySelector(`tr[data-id='${updatedOrder.orderId}']`);
+      tr.innerHTML = rowHtml(updatedOrder);
+      clearForm();
+    }).updateOrder(order);
+  }
+}
+
+// Add row to table
+function addRow(o) {
+  if (ordersBody.querySelector(".no-data")) ordersBody.innerHTML = "";
+  const tr = document.createElement("tr");
+  tr.setAttribute("data-id", o.orderId);
+  tr.innerHTML = rowHtml(o);
+  ordersBody.appendChild(tr);
+}
+
+// Edit row
+function edit(btn) {
+  const tr = btn.closest("tr");
+  editOrderId = tr.getAttribute("data-id");
+  document.getElementById("orderDate").value = tr.cells[1].innerText;
+  document.getElementById("supplierId").value = tr.cells[2].innerText;
+  document.getElementById("supplierName").value = tr.cells[3].innerText;
+  document.getElementById("model").value = tr.cells[4].innerText;
+  document.getElementById("quantity").value = tr.cells[5].innerText;
+}
+
+// Delete row
+function removeRow(btn) {
+  if (!confirm("Delete this order?")) return;
+  const tr = btn.closest("tr");
+  const orderId = tr.getAttribute("data-id");
+
+  google.script.run.withSuccessHandler(() => {
+    tr.remove();
+    if (!ordersBody.children.length) {
+      ordersBody.innerHTML = `<tr class="no-data"><td colspan="7">No orders yet</td></tr>`;
+    }
+  }).deleteOrder(orderId);
+}
+</script>
+
+</body>
+</html>
