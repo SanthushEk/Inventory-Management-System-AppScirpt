@@ -16,7 +16,7 @@ The goal was to understand how a production-like system can be created using **G
 - JavaScript
 
 ## Live Demo
-https://script.google.com/macros/s/AKfycbw6_RbF09NF3xAUnj0oU9DdtyCgP0SwLKvQxbzy22gI/dev
+https://script.google.com/macros/s/AKfycbwFiKEfz3ZMH-rZPj855r-VfvdAzMXAYgZVGE5Vq5-ZaRyrTZ8GHMeo48jaLHi0MaNpLA/exec
 
 ## Author
 SanthushEk
